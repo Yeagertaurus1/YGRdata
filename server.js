@@ -14,11 +14,11 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// NOTE: These keys are intentionally hard-coded here as the trusted backend secrets.
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_live_86b856ac31038c22176a849252c4d53a9230d64c';
-const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET || 'sk_live_86b856ac31038c22176a849252c4d53a9230d64c';
-const REMADATA_API_KEY = process.env.REMADATA_API_KEY || 'rd_live_0131b88063e7c24a3ecc64516a2efabcc95544edcd993190';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ygr2025admin';
+// NOTE: These keys are loaded from environment variables for security.
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET;
+const REMADATA_API_KEY = process.env.REMADATA_API_KEY;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 const orders = [];
 const complaints = [];
