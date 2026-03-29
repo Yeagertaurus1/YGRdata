@@ -30,7 +30,7 @@ app.use(
     origin: process.env.CORS_ORIGIN || 'https://ygrdata.netlify.app'
   })
 );
-
+0
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -58,9 +58,20 @@ app.post(
     }
 
     if (event.event === 'charge.success') {
-      const data = event.data || {};
-      const reference = data.reference;
-      console.log('charge.success webhook received for reference:', reference);
+      const metadata = event.data?.metadata || {};
+      const { network, bundle, recipientNumber } = metadata;
+
+      if (network && bundle && recipientNumber) {
+        sendData({ network, phone: recipientNumber, bundle })
+          .then(r => console.log('Webhook sent:', r))
+          .catch(e => console.error('Webhook error:', e.message));
+      } else {
+        console.warn('Webhook charge.success missing metadata for sendData', {
+          network,
+          bundle,
+          recipientNumber
+        });
+      }
     }
 
     return res.status(200).send('OK');
@@ -82,26 +93,18 @@ async function fetchRemaBundles(network) {
 }
 
 async function sendData({ network, phone, bundle }) {
-  const bundlesData = await fetchRemaBundles(network);
-  const plans = bundlesData?.data || bundlesData || [];
+  // Convert bundle like '1GB' to volumeInMB
+  const gb = parseInt(bundle);
+  const volumeInMB = gb * 1024;
 
-  let targetPlan = null;
-  for (const plan of plans) {
-    const name = (plan.name || '').toString().toLowerCase();
-    if (name.includes(bundle.toLowerCase())) {
-      targetPlan = plan;
-      break;
-    }
-  }
-
-  if (!targetPlan) {
-    throw new Error('Matching data plan not found on RemaData');
-  }
+  // Generate unique reference
+  const ref = crypto.randomUUID();
 
   const payload = {
-    network,
     phone,
-    plan_id: targetPlan.plan_id || targetPlan.id
+    volumeInMB,
+    networkType: network.toLowerCase(),
+    ref
   };
 
   const resp = await axios.post(
@@ -228,6 +231,20 @@ app.post('/complaint', (req, res) => {
   };
   complaints.push(complaint);
   return res.json({ success: true });
+});
+
+app.get('/track-order', (req, res) => {
+  const { reference } = req.query;
+  if (!reference) {
+    return res.status(400).json({ success: false, message: 'Reference is required' });
+  }
+
+  const order = orders.find(o => o.reference === reference);
+  if (!order) {
+    return res.status(404).json({ success: false, message: 'Order not found' });
+  }
+
+  return res.json({ success: true, order });
 });
 
 app.get('/admin/orders', (req, res) => {
